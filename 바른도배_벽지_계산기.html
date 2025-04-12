@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>바른도배 벽지 계산기</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 10px;
+      text-align: center;
+    }
+    .row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 5px 0;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    input {
+      width: 80px;
+      padding: 5px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+    }
+    .wall-label {
+      width: 50px;
+      text-align: right;
+    }
+    #result {
+      white-space: pre-wrap;
+      text-align: left;
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>바른도배 벽지 계산기</h2>
+
+  <div class="row">
+    <label>폭(cm)</label>
+    <input type="number" id="sheetWidth" maxlength="5" />
+    <label>총길이(cm)</label>
+    <input type="number" id="rollLength" maxlength="5" />
+  </div>
+
+  <div id="wallsContainer"></div>
+
+  <button onclick="addWall()">+ 벽면 추가</button>
+  <button onclick="calculate()">계산하기</button>
+  <button onclick="window.print()">인쇄</button>
+
+  <div id="result"></div>
+
+  <script>
+    let wallCount = 0;
+
+    function addWall() {
+      wallCount++;
+      const container = document.createElement("div");
+      container.className = "row inline-inputs";
+      container.innerHTML = \`
+        <span class="wall-label">벽 \${wallCount}.</span>
+        <label>가로(cm)</label>
+        <input type="number" class="width" maxlength="5" />
+        <label>세로(cm)</label>
+        <input type="number" class="height" maxlength="5" />
+      \`;
+      document.getElementById("wallsContainer").appendChild(container);
+    }
+
+    addWall(); // 초기 벽 1개
+
+    function calculate() {
+      const sheetWidth = parseInt(document.getElementById('sheetWidth').value);
+      const rollLength = parseInt(document.getElementById('rollLength').value);
+      const widths = Array.from(document.querySelectorAll('.width')).map(w => parseInt(w.value));
+      const heights = Array.from(document.querySelectorAll('.height')).map(h => parseInt(h.value));
+      let totalSheets = 0;
+      let sheetHeights = [];
+
+      let leftoverWidths = [];
+
+      let detailText = "";
+      for (let i = 0; i < widths.length; i++) {
+        if (isNaN(widths[i]) || isNaN(heights[i])) continue;
+        const sheetCount = Math.ceil(widths[i] / sheetWidth);
+        totalSheets += sheetCount;
+        for (let j = 0; j < sheetCount; j++) {
+          sheetHeights.push(heights[i]);
+        }
+        const leftoverWidth = (sheetWidth * sheetCount) - widths[i];
+        leftoverWidths.push(\`벽 \${i + 1}: \${leftoverWidth}cm\`);
+      }
+
+      const sheetsPerRoll = Math.floor(rollLength / Math.min(...heights));
+      const totalRolls = Math.ceil(totalSheets / sheetsPerRoll);
+
+      let rollDetails = '';
+      let sheetsRemaining = [...sheetHeights];
+
+      for (let i = 1; i <= totalRolls; i++) {
+        let usedLengths = {};
+        let usedLength = 0;
+        while (sheetsRemaining.length > 0) {
+          const h = sheetsRemaining[0];
+          if (usedLength + h > rollLength) break;
+          usedLength += h;
+          usedLengths[h] = (usedLengths[h] || 0) + 1;
+          sheetsRemaining.shift();
+        }
+        const leftover = rollLength - usedLength;
+        const cuts = Object.entries(usedLengths)
+          .map(([len, count]) => \`\${len}×\${count}\`)
+          .join(', ');
+        rollDetails += \`롤 \${i}: \${cuts}, 남는 길이: \${leftover}cm\n\`;
+      }
+
+      const result = \`총 필요한 폭 수: \${totalSheets}개\n총 필요한 롤 수: \${totalRolls}롤\n\n각 롤별 재단 내역:\n\${rollDetails}\n\n벽면별 남는 폭:\n\${leftoverWidths.join('\n')}\`;
+      document.getElementById('result').innerText = result;
+    }
+  </script>
+</body>
+</html>
